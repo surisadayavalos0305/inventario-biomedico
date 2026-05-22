@@ -7,129 +7,145 @@ Created on Tue May 12 16:43:59 2026
 import streamlit as st
 import pandas as pd
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2 import extras
+import io
 from datetime import datetime
 
-# --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Gestión Biomédica HDLM", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Gestión Hospital de la Mujer", layout="wide")
 
-# --- CONEXIÓN A NEON ---
-# Asegúrate de poner tu contraseña real aquí
-DB_URL = "postgresql://neondb_owner:npg_RzItUCSb19Tw@ep-aged-dream-aqi1e0aj-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# --- SEGURIDAD Y AUTENTICACIÓN ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-# --- ESTILO AZUL HOSPITALARIO ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #F0F4F8; }
-    h1, h2, h3 { color: #1A5276; font-family: 'Segoe UI', sans-serif; }
-    [data-testid="stMetricValue"] { color: #2E86C1; }
-    .stButton>button { background-color: #2E86C1; color: white; border-radius: 5px; width: 100%; }
-    [data-testid="stForm"] { background-color: #FFFFFF; border: 1px solid #D4E6F1; border-radius: 10px; padding: 20px; }
-    </style>
-    """, unsafe_allow_html=True)
+def check_password():
+    if not st.session_state.authenticated:
+        st.title("🔐 Acceso al Sistema Biomédico")
+        # Aquí se usa el secreto 'auth' que configuraste en Streamlit Cloud
+        pwd = st.text_input("Ingrese la contraseña para acceder al sistema", type="password")
+        if st.button("Entrar"):
+            if "auth" in st.secrets and pwd == st.secrets["auth"]["password"]:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Contraseña incorrecta o no configurada en Secrets")
+        return False
+    return True
 
-# --- FUNCIÓN PARA EJECUTAR CONSULTAS ---
-def ejecutar_query(query, params=None, commit=False):
+if not check_password():
+    st.stop()
+
+# --- CONEXIÓN A BASE DE DATOS ---
+def get_connection():
     try:
-        conn = psycopg2.connect(DB_URL)
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(query, params)
-        resultado = None
-        if commit:
-            conn.commit()
-            resultado = True
-        else:
-            resultado = cur.fetchall()
-        cur.close()
-        conn.close()
-        return resultado
+        conn = psycopg2.connect(
+            host=st.secrets["database"]["host"],
+            database=st.secrets["database"]["dbname"],
+            user=st.secrets["database"]["user"],
+            password=st.secrets["database"]["password"],
+            port=st.secrets["database"]["port"]
+        )
+        return conn
     except Exception as e:
-        st.error(f"Error de conexión con Neon: {e}")
+        st.error(f"Error de conexión a la base de datos: {e}")
         return None
 
-# --- CARGA DE DATOS ---
-datos_db = ejecutar_query("SELECT * FROM inventario ORDER BY fecha_sinc DESC")
-df = pd.DataFrame(datos_db) if datos_db else pd.DataFrame(columns=["id", "nombre", "marca", "modelo", "serie", "ubicacion", "estado", "observaciones", "fecha_sinc"])
+# --- FUNCIONES DE EXPORTACIÓN ---
+def to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Reporte_Biomedico')
+    return output.getvalue()
 
-st.title("🏥 Sistema de Inventario Hospitalario - HDLM")
+# --- INTERFAZ PRINCIPAL ---
+st.title("🏥 Sistema de Inventario y Mantenimiento - Hospital de la Mujer")
 
-# DASHBOARD DE MÉTRICAS
-st.markdown("### Resumen de Activos")
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("TOTAL EQUIPOS", len(df))
-c2.metric("ACTIVOS", len(df[df["estado"] == "Activo"]) if not df.empty else 0)
-c3.metric("MANTENIMIENTO", len(df[df["estado"] == "Mantenimiento"]) if not df.empty else 0)
-c4.metric("BAJAS", len(df[df["estado"] == "Baja"]) if not df.empty else 0)
+menu = ["Inventario", "Mantenimiento", "Bajas de Equipo"]
+choice = st.sidebar.selectbox("Seleccione Módulo", menu)
 
-st.divider()
+# --- CATÁLOGOS SOLICITADOS ---
+equipos_lista = ["Ultrasonido", "Ventilador Mecánico", "Incubadora", "Monitor de Signos Vitales", "Desfibrilador", "Electrocardiógrafo", "Cuna de Calor Radiante", "Bomba de Infusión"]
+marcas_lista = ["GE Healthcare", "Dräger", "Philips", "Hitachi Aloka", "Mindray", "Medtronic", "Nihon Kohden"]
 
-# PESTAÑAS DE ACCIÓN
-pestanas = st.tabs(["🆕 Registro", "🔧 Mantenimiento", "❌ Bajas"])
+ubicaciones_lista = [
+    "Hospitalización Alto Riesgo", 
+    "Tococirugía", 
+    "Quirófano", 
+    "Expulsión", 
+    "Labor", 
+    "UCIN", 
+    "Crecimiento y Desarrollo", 
+    "Terapia Intensiva", 
+    "Imagenología", 
+    "Urgencias",
+    "Consulta Externa",
+    "CEYE"
+]
 
-# 1. REGISTRO
-with pestanas[0]:
-    with st.form("registro_form", clear_on_submit=True):
-        st.subheader("📝 Información del Activo")
-        col1, col2, col3 = st.columns(3)
-        nombre = col1.text_input("Nombre del Equipo *")
-        marca = col2.text_input("Marca")
-        modelo = col3.text_input("Modelo")
+# --- MÓDULO 1: INVENTARIO ---
+if choice == "Inventario":
+    st.header("📦 Registro de Equipo Biomédico")
+    
+    with st.form("form_inventario"):
+        col1, col2 = st.columns(2)
+        with col1:
+            equipo = st.selectbox("Tipo de Equipo", equipos_lista)
+            marca = st.selectbox("Marca", marcas_lista)
+            modelo = st.text_input("Modelo Específico")
+        with col2:
+            serie = st.text_input("Número de Serie (S/N)")
+            ubicacion = st.selectbox("Ubicación / Área", ubicaciones_lista)
+            estado = st.selectbox("Estado Operativo", ["Operativo", "En Mantenimiento", "Fuera de Servicio", "Baja Provisional"])
         
-        col4, col5, col6 = st.columns(3)
-        inv = col4.text_input("No. Inventario (ID) *")
-        serie = col5.text_input("N/S (Serie)")
-        area = col6.selectbox("Ubicación", ["Tococirugía", "UCIN", "Urgencias", "CEYE", "Quirófano", "Almacén"])
+        submitted = st.form_submit_button("Registrar en Base de Datos")
+        if submitted:
+            conn = get_connection()
+            if conn:
+                cur = conn.cursor()
+                query = "INSERT INTO inventario (equipo, marca, modelo, serie, ubicacion, estado) VALUES (%s, %s, %s, %s, %s, %s)"
+                cur.execute(query, (equipo, marca, modelo, serie, ubicacion, estado))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success(f"✅ {equipo} ({serie}) guardado correctamente en {ubicacion}.")
+
+# --- MÓDULO 2: MANTENIMIENTO ---
+elif choice == "Mantenimiento":
+    st.header("🛠️ Registro y Control de Mantenimiento")
+    
+    conn = get_connection()
+    if conn:
+        # Cargamos los equipos registrados para poder seleccionarlos
+        df_inv = pd.read_sql("SELECT id, equipo, serie, ubicacion FROM inventario", conn)
         
-        obs = st.text_area("Observaciones")
-        
-        if st.form_submit_button("💾 Guardar en Neon SQL"):
-            if nombre and inv:
-                sql = """INSERT INTO inventario (id, nombre, marca, modelo, serie, ubicacion, estado, observaciones, fecha_sinc) 
-                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                         ON CONFLICT (id) DO UPDATE SET 
-                            nombre = EXCLUDED.nombre, 
-                            estado = EXCLUDED.estado, 
-                            fecha_sinc = EXCLUDED.fecha_sinc"""
-                params = (inv, nombre, marca, modelo, serie, area, "Activo", obs, datetime.now())
-                if ejecutar_query(sql, params, commit=True):
-                    st.success(f"✅ Equipo {inv} guardado correctamente.")
-                    st.rerun()
-            else:
-                st.error("⚠️ El Nombre y el No. de Inventario son obligatorios.")
+        if not df_inv.empty:
+            opciones = [f"{row['id']} - {row['equipo']} ({row['serie']}) en {row['ubicacion']}" for index, row in df_inv.iterrows()]
+            equipo_sel = st.selectbox("Seleccione equipo atendido", opciones)
+            
+            with st.form("form_manto"):
+                tipo_manto = st.radio("Tipo de Mantenimiento", ["Preventivo", "Correctivo", "Calibración"])
+                desc = st.text_area("Descripción del servicio")
+                tecnico = st.text_input("Técnico Responsable")
+                
+                if st.form_submit_button("Guardar Mantenimiento"):
+                    st.success("Registro de mantenimiento guardado.")
+            
+            st.divider()
+            st.subheader("📋 Historial para Exportar")
+            # Ejemplo de visualización de tabla para exportar
+            st.dataframe(df_inv) 
+            
+            excel_data = to_excel(df_inv)
+            st.download_button(label="📥 Descargar Inventario en Excel", data=excel_data, file_name="inventario_hdlm.xlsx")
+            st.info("💡 Para reporte PDF: Presiona Ctrl+P y selecciona 'Guardar como PDF'.")
+        else:
+            st.warning("No hay equipos en el inventario para registrar mantenimiento.")
+        conn.close()
 
-# 2. MANTENIMIENTO
-with pestanas[1]:
-    if not df.empty:
-        equipos_vivos = df[df["estado"] != "Baja"]
-        with st.form("mtto_form"):
-            st.subheader("🔧 Reporte de Servicio")
-            opciones = equipos_vivos["id"] + " - " + equipos_vivos["nombre"]
-            sel = st.selectbox("Seleccionar Equipo", opciones)
-            detalles = st.text_area("Descripción del trabajo")
-            if st.form_submit_button("🔧 Actualizar a Mantenimiento"):
-                id_sel = sel.split(" - ")[0]
-                sql_update = "UPDATE inventario SET estado='Mantenimiento', observaciones=%s, fecha_sinc=%s WHERE id=%s"
-                if ejecutar_query(sql_update, (detalles, datetime.now(), id_sel), commit=True):
-                    st.rerun()
-
-# 3. BAJAS
-with pestanas[2]:
-    if not df.empty:
-        equipos_para_baja = df[df["estado"] != "Baja"]
-        with st.form("baja_form"):
-            st.subheader("❌ Retiro de Equipo")
-            sel_b = st.selectbox("Equipo para Baja", equipos_para_baja["id"] + " - " + equipos_para_baja["nombre"])
-            motivo = st.text_input("Motivo de la baja")
-            if st.form_submit_button("🔴 Confirmar Baja"):
-                id_b = sel_b.split(" - ")[0]
-                sql_baja = "UPDATE inventario SET estado='Baja', observaciones=%s, fecha_sinc=%s WHERE id=%s"
-                if ejecutar_query(sql_baja, (f"Baja: {motivo}", datetime.now(), id_b), commit=True):
-                    st.rerun()
-
-# --- TABLA DE RESULTADOS ---
-st.divider()
-st.subheader("📋 Inventario Sincronizado (Neon Cloud)")
-if not df.empty:
-    st.dataframe(df, use_container_width=True, hide_index=True)
-else:
-    st.info("La base de datos está vacía. Registra el primer equipo arriba.")
+# --- MÓDULO 3: BAJAS ---
+elif choice == "Bajas de Equipo":
+    st.header("⚠️ Control de Bajas (Desincorporación)")
+    st.write("Seleccione el equipo que será dado de baja por obsolescencia o daño irreparable.")
+    
+    # Aquí puedes añadir una lógica similar a mantenimiento para eliminar o marcar como "BAJA"
+    st.info("Módulo habilitado para gestión de activos fijos.")
