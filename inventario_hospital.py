@@ -51,15 +51,14 @@ choice = st.sidebar.selectbox("Módulo", ["Inventario", "Mantenimiento", "Bajas"
 
 if choice == "Inventario":
     st.header("Inventario de Equipos")
-    with st.expander("Registrar Nuevo Equipo"):
-        with st.form("reg"):
-            c1, c2 = st.columns(2)
-            with c1: eq = st.text_input("Equipo"); ma = st.text_input("Marca"); mo = st.text_input("Modelo")
-            with c2: se = st.text_input("Serie"); ub = st.text_input("Ubicación"); es = st.text_input("Estado")
-            if st.form_submit_button("Guardar"):
-                conn = get_connection(); cur = conn.cursor()
-                cur.execute("INSERT INTO inventario (equipo, marca, modelo, serie, ubicacion, estado) VALUES (%s,%s,%s,%s,%s,%s)", (eq, ma, mo, se, ub, es))
-                conn.commit(); conn.close(); st.rerun()
+    with st.form("reg"):
+        c1, c2 = st.columns(2)
+        with c1: eq = st.text_input("Nombre del Equipo"); ma = st.text_input("Marca"); mo = st.text_input("Modelo")
+        with c2: se = st.text_input("Serie"); ub = st.text_input("Ubicación"); es = st.text_input("Estado")
+        if st.form_submit_button("Guardar"):
+            conn = get_connection(); cur = conn.cursor()
+            cur.execute("INSERT INTO inventario (equipo, marca, modelo, serie, ubicacion, estado) VALUES (%s,%s,%s,%s,%s,%s)", (eq, ma, mo, se, ub, es))
+            conn.commit(); conn.close(); st.rerun()
     conn = get_connection(); df = pd.read_sql("SELECT * FROM inventario", conn); conn.close()
     st.dataframe(df, use_container_width=True)
     c1, c2 = st.columns(2)
@@ -69,14 +68,20 @@ if choice == "Inventario":
 elif choice == "Mantenimiento":
     st.header("Registro de Mantenimiento")
     with st.form("form_manto"):
-        eq = st.text_input("Equipo (Nombre y Serie)")
         c1, c2 = st.columns(2)
-        with c1: fecha = st.text_input("Fecha"); tipo = st.text_input("Tipo de Mantenimiento"); tec = st.text_input("Técnico")
-        with c2: costo = st.text_input("Costo"); prox = st.text_input("Próximo mantenimiento")
+        with c1:
+            equipo = st.text_input("Nombre del Equipo")
+            serie = st.text_input("Serie del Equipo")
+            fecha = st.text_input("Fecha")
+        with c2:
+            tipo = st.text_input("Tipo de Mantenimiento")
+            tec = st.text_input("Técnico")
+            costo = st.text_input("Costo")
+        prox = st.text_input("Próximo mantenimiento")
         desc = st.text_area("Descripción detallada del trabajo")
         if st.form_submit_button("Guardar Mantenimiento"):
             conn = get_connection(); cur = conn.cursor()
-            cur.execute("INSERT INTO mantenimientos (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) VALUES (%s,%s,%s,%s,%s,%s,%s)", (eq, fecha, tipo, tec, costo, desc, prox))
+            cur.execute("INSERT INTO mantenimientos (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) VALUES (%s,%s,%s,%s,%s,%s,%s)", (f"{equipo} (S/N: {serie})", fecha, tipo, tec, costo, desc, prox))
             conn.commit(); conn.close(); st.success("Guardado correctamente")
     conn = get_connection(); df = pd.read_sql("SELECT * FROM mantenimientos", conn); conn.close()
     st.dataframe(df, use_container_width=True)
@@ -87,14 +92,22 @@ elif choice == "Mantenimiento":
 elif choice == "Bajas":
     st.header("Control de Bajas")
     with st.form("form_baja"):
-        eq = st.text_input("Equipo (Nombre y Serie)")
         c1, c2 = st.columns(2)
-        with c1: fecha = st.text_input("Fecha de baja"); mot = st.text_input("Motivo"); aut = st.text_input("Autorizado por"); fol = st.text_input("Folio de acta")
-        with c2: dest = st.text_input("Destino del equipo"); fac = st.text_input("Fecha del acta"); val = st.text_input("Valor residual")
+        with c1:
+            equipo = st.text_input("Nombre del Equipo")
+            serie = st.text_input("Serie del Equipo")
+            fecha = st.text_input("Fecha de baja")
+            mot = st.text_input("Motivo")
+            aut = st.text_input("Autorizado por")
+        with c2:
+            fol = st.text_input("Folio de acta")
+            dest = st.text_input("Destino del equipo")
+            fac = st.text_input("Fecha del acta")
+            val = st.text_input("Valor residual")
         obs = st.text_area("Observaciones detalladas")
         if st.form_submit_button("Guardar Baja"):
             conn = get_connection(); cur = conn.cursor()
-            cur.execute("INSERT INTO bajas (equipo_info, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (eq, fecha, mot, obs, aut, dest, fol, fac, val))
+            cur.execute("INSERT INTO bajas (equipo_info, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (f"{equipo} (S/N: {serie})", fecha, mot, obs, aut, dest, fol, fac, val))
             conn.commit(); conn.close(); st.warning("Baja documentada correctamente")
     conn = get_connection(); df = pd.read_sql("SELECT * FROM bajas", conn); conn.close()
     st.dataframe(df, use_container_width=True)
