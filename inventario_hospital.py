@@ -15,7 +15,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 st.set_page_config(layout="wide", page_title="Sistema Biomédico HDLM")
 
-# --- FUNCIONES DE APOYO ---
+# --- FUNCIONES DE REPORTES ---
 def get_connection(): return psycopg2.connect(**st.secrets["database"])
 
 def generate_excel(df):
@@ -55,7 +55,7 @@ if choice == "Inventario":
         with st.form("reg"):
             c1, c2 = st.columns(2)
             with c1: eq = st.text_input("Equipo"); ma = st.text_input("Marca"); mo = st.text_input("Modelo")
-            with c2: se = st.text_input("Serie"); ub = st.text_input("Ubicación"); es = st.selectbox("Estado", ["Operativo", "En Mantenimiento", "Baja"])
+            with c2: se = st.text_input("Serie"); ub = st.text_input("Ubicación"); es = st.text_input("Estado")
             if st.form_submit_button("Guardar"):
                 conn = get_connection(); cur = conn.cursor()
                 cur.execute("INSERT INTO inventario (equipo, marca, modelo, serie, ubicacion, estado) VALUES (%s,%s,%s,%s,%s,%s)", (eq, ma, mo, se, ub, es))
@@ -63,45 +63,41 @@ if choice == "Inventario":
     conn = get_connection(); df = pd.read_sql("SELECT * FROM inventario", conn); conn.close()
     st.dataframe(df, use_container_width=True)
     c1, c2 = st.columns(2)
-    with c1: st.download_button("Excel", generate_excel(df), "inventario.xlsx")
-    with c2: st.download_button("PDF", generate_pdf(df, "Inventario General"), "inventario.pdf")
+    with c1: st.download_button("Descargar Excel", generate_excel(df), "inventario.xlsx")
+    with c2: st.download_button("Descargar PDF", generate_pdf(df, "Inventario General"), "inventario.pdf")
 
 elif choice == "Mantenimiento":
     st.header("Registro de Mantenimiento")
-    conn = get_connection()
-    equipos = pd.read_sql("SELECT id, equipo || ' (S/N: ' || serie || ')' as label FROM inventario", conn)
     with st.form("form_manto"):
-        sel = st.selectbox("Seleccionar equipo", equipos['label'])
+        eq = st.text_input("Equipo (Nombre y Serie)")
         c1, c2 = st.columns(2)
-        with c1: fecha = st.date_input("Fecha"); tipo = st.selectbox("Tipo", ["Preventivo", "Correctivo", "Calibración"]); tec = st.text_input("Técnico")
-        with c2: costo = st.number_input("Costo ($)", 0.0); prox = st.date_input("Próximo mantenimiento")
+        with c1: fecha = st.text_input("Fecha"); tipo = st.text_input("Tipo de Mantenimiento"); tec = st.text_input("Técnico")
+        with c2: costo = st.text_input("Costo"); prox = st.text_input("Próximo mantenimiento")
         desc = st.text_area("Descripción detallada del trabajo")
         if st.form_submit_button("Guardar Mantenimiento"):
-            cur = conn.cursor()
-            cur.execute("INSERT INTO mantenimientos (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) VALUES (%s,%s,%s,%s,%s,%s,%s)", (sel, fecha, tipo, tec, costo, desc, prox))
-            conn.commit(); conn.close(); st.success("Mantenimiento registrado")
-    df = pd.read_sql("SELECT * FROM mantenimientos", conn); conn.close()
+            conn = get_connection(); cur = conn.cursor()
+            cur.execute("INSERT INTO mantenimientos (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) VALUES (%s,%s,%s,%s,%s,%s,%s)", (eq, fecha, tipo, tec, costo, desc, prox))
+            conn.commit(); conn.close(); st.success("Guardado correctamente")
+    conn = get_connection(); df = pd.read_sql("SELECT * FROM mantenimientos", conn); conn.close()
     st.dataframe(df, use_container_width=True)
     c1, c2 = st.columns(2)
-    with c1: st.download_button("Excel", generate_excel(df), "mantenimiento.xlsx")
-    with c2: st.download_button("PDF", generate_pdf(df, "Reporte Mantenimiento"), "mantenimiento.pdf")
+    with c1: st.download_button("Descargar Excel", generate_excel(df), "mantenimiento.xlsx")
+    with c2: st.download_button("Descargar PDF", generate_pdf(df, "Reporte Mantenimiento"), "mantenimiento.pdf")
 
 elif choice == "Bajas":
     st.header("Control de Bajas")
-    conn = get_connection()
-    equipos = pd.read_sql("SELECT id, equipo || ' (S/N: ' || serie || ')' as label FROM inventario", conn)
     with st.form("form_baja"):
-        sel = st.selectbox("Seleccionar equipo", equipos['label'])
+        eq = st.text_input("Equipo (Nombre y Serie)")
         c1, c2 = st.columns(2)
-        with c1: fecha = st.date_input("Fecha de baja"); mot = st.selectbox("Motivo", ["Robo", "Obsolescencia", "Daño irreparable", "Donación", "Transferencia", "Otro"]); aut = st.text_input("Quién autoriza"); fol = st.text_input("Folio de acta")
-        with c2: dest = st.text_input("Destino del equipo"); fac = st.date_input("Fecha del acta"); val = st.number_input("Valor residual ($)", 0.0)
+        with c1: fecha = st.text_input("Fecha de baja"); mot = st.text_input("Motivo"); aut = st.text_input("Autorizado por"); fol = st.text_input("Folio de acta")
+        with c2: dest = st.text_input("Destino del equipo"); fac = st.text_input("Fecha del acta"); val = st.text_input("Valor residual")
         obs = st.text_area("Observaciones detalladas")
-        if st.form_submit_button("Confirmar Baja"):
-            cur = conn.cursor()
-            cur.execute("INSERT INTO bajas (equipo_info, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (sel, fecha, mot, obs, aut, dest, fol, fac, val))
-            conn.commit(); conn.close(); st.warning("Baja documentada")
-    df = pd.read_sql("SELECT * FROM bajas", conn); conn.close()
+        if st.form_submit_button("Guardar Baja"):
+            conn = get_connection(); cur = conn.cursor()
+            cur.execute("INSERT INTO bajas (equipo_info, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (eq, fecha, mot, obs, aut, dest, fol, fac, val))
+            conn.commit(); conn.close(); st.warning("Baja documentada correctamente")
+    conn = get_connection(); df = pd.read_sql("SELECT * FROM bajas", conn); conn.close()
     st.dataframe(df, use_container_width=True)
     c1, c2 = st.columns(2)
-    with c1: st.download_button("Excel", generate_excel(df), "bajas.xlsx")
-    with c2: st.download_button("PDF", generate_pdf(df, "Acta de Bajas"), "bajas.pdf")
+    with c1: st.download_button("Descargar Excel", generate_excel(df), "bajas.xlsx")
+    with c2: st.download_button("Descargar PDF", generate_pdf(df, "Acta de Bajas"), "bajas.pdf")
