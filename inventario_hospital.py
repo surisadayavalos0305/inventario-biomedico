@@ -91,11 +91,8 @@ elif choice == "Mantenimiento":
 
 elif choice == "Bajas":
     st.header("Control de Bajas")
-    
-    # Asegúrate de importar 'import datetime' al principio de tu archivo
     import datetime 
 
-    # 1. Obtener equipos activos
     conn = get_connection()
     df = pd.read_sql("SELECT * FROM inventario WHERE estado != 'Baja'", conn)
     conn.close()
@@ -103,12 +100,9 @@ elif choice == "Bajas":
     if not df.empty:
         with st.form("form_baja_completo"):
             st.subheader("📝 Datos del Equipo a dar de baja")
-            
-            # Selección de equipo
             seleccion = st.selectbox("Seleccione el equipo", df["equipo"] + " - " + df["serie"])
             equipo_sel = df[df["equipo"] + " - " + df["serie"] == seleccion].iloc[0]
             
-            # Formulario detallado
             c1, c2 = st.columns(2)
             with c1:
                 motivo = st.text_input("Motivo de la baja")
@@ -125,16 +119,17 @@ elif choice == "Bajas":
                     conn = get_connection()
                     cur = conn.cursor()
                     
-                    # 1. Marcamos como Baja en la tabla inventario
+                    # Actualizar estado
                     cur.execute("UPDATE inventario SET estado='Baja' WHERE id=%s", (int(equipo_sel['id']),))
                     
-                    # 2. Insertamos el registro completo en la tabla bajas (9 campos)
+                    # INSERT usando comillas dobles para forzar el nombre de la columna
+                    # Esto evita errores si Postgres interpretó el nombre de forma sensible
                     sql_insert = """INSERT INTO bajas 
-                    (equipo_info, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) 
+                    ("equipo_info", "fecha_baja", "motivo", "descripcion_motivo", "quien_autorizo", "destino", "folio_acta", "fecha_acta", "valor_residual") 
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
                     
                     cur.execute(sql_insert, (
-                        f"{equipo_sel['equipo']} {equipo_sel['marca']} {equipo_sel['modelo']}", 
+                        f"{equipo_sel['equipo']} {equipo_sel['marca']}", 
                         datetime.date.today(), 
                         motivo, 
                         obs, 
@@ -148,18 +143,7 @@ elif choice == "Bajas":
                     conn.commit()
                     cur.close()
                     conn.close()
-                    st.success("¡Baja procesada y guardada correctamente!")
+                    st.success("¡Baja procesada con éxito!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error al procesar la baja: {e}")
-    else:
-        st.info("No hay equipos activos disponibles para dar de baja.")
-
-    # 3. Mostrar historial de bajas para referencia
-    st.divider()
-    st.subheader("📋 Historial de Bajas")
-    conn = get_connection()
-    df_bajas = pd.read_sql("SELECT * FROM bajas ORDER BY fecha_baja DESC", conn)
-    conn.close()
-    st.dataframe(df_bajas, use_container_width=True)
-
+                    st.error(f"Error de base de datos: {e}")
