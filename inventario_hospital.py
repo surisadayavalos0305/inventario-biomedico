@@ -110,15 +110,13 @@ elif choice == "Mantenimiento":
 # --- MÓDULO DE BAJAS CORREGIDO ---
 elif choice == "Bajas":
     st.header("Control de Bajas")
-    import datetime 
-
     conn = get_connection()
     df = pd.read_sql("SELECT * FROM inventario WHERE estado != 'Baja'", conn)
     conn.close()
 
     if not df.empty:
         with st.form("form_baja_completo"):
-            st.subheader("📝 Datos del Equipo a dar de baja")
+            st.subheader("Datos del equipo a dar de baja")
             seleccion = st.selectbox("Seleccione el equipo", df["equipo"] + " - " + df["serie"])
             equipo_sel = df[df["equipo"] + " - " + df["serie"] == seleccion].iloc[0]
             
@@ -133,35 +131,19 @@ elif choice == "Bajas":
                 fecha_acta = st.date_input("Fecha del acta")
                 valor_res = st.number_input("Valor residual", min_value=0.0, format="%.2f")
 
-            if st.form_submit_button("🔴 Confirmar Baja Definitiva"):
+            if st.form_submit_button("Confirmar Baja Definitiva"):
                 try:
                     conn = get_connection()
                     cur = conn.cursor()
-                    
-                    # 1. Actualizar estado
                     cur.execute("UPDATE inventario SET estado='Baja' WHERE id=%s", (int(equipo_sel['id']),))
-                    
-                    # 2. INSERT con la columna correcta 'id_equipo' en lugar de 'equipo_info'
                     sql_insert = """INSERT INTO bajas 
-                    (id_equipo, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-                    
-                    cur.execute(sql_insert, (
-                        int(equipo_sel['id']), # Aquí guardamos el ID del equipo
-                        datetime.date.today(), 
-                        motivo, 
-                        obs, 
-                        autorizado, 
-                        destino, 
-                        folio, 
-                        fecha_acta, 
-                        valor_res
-                    ))
-                    
-                    conn.commit()
-                    cur.close()
-                    conn.close()
-                    st.success("¡Baja procesada con éxito!")
+                                    (id_equipo, fecha_baja, motivo, descripcion_motivo, quien_autorizo, destino, folio_acta, fecha_acta, valor_residual) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                    cur.execute(sql_insert, (int(equipo_sel['id']), datetime.date.today(), motivo, obs, autorizado, destino, folio, fecha_acta, valor_res))
+                    conn.commit(); cur.close(); conn.close()
+                    st.success("Baja procesada correctamente")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error de base de datos: {e}")
+    else:
+        st.info("No hay equipos disponibles para dar de baja.")
