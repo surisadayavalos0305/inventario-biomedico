@@ -15,16 +15,15 @@ st.set_page_config(layout="wide", page_title="Sistema Biomédico HDLM")
 # --- DISEÑO Y ESTILO DE PÁGINA ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f4f7f6; }
-    .stForm { 
-        background-color: #ffffff; 
-        border: 1px solid #e0e0e0; 
-        border-radius: 12px; 
-        padding: 25px; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    /* El !important obliga al navegador a sobrescribir el estilo base de Streamlit */
+    .stApp {
+        background-color: #f4f7f6 !important;
     }
-    [data-testid="stSidebar"] { background-color: #e6eaf1; }
-    h1, h2, h3 { color: #0083B8; }
+    
+    /* Si también quieres cambiar el fondo de la zona principal de contenido */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f4f7f6 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
