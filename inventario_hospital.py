@@ -15,35 +15,42 @@ st.set_page_config(layout="wide", page_title="Sistema Biomédico HDLM")
 # --- DISEÑO Y ESTILO DE PÁGINA (MODO OSCURO Y AZUL) ---
 st.markdown("""
     <style>
-    /* Fondo general */
+    /* 1. Fondo General */
     .stApp { background-color: #000000 !important; color: #87CEEB !important; }
 
-    /* Estilo para las casillas de entrada (input, selectbox, textarea) */
-    div[data-baseweb="base-input"], 
-    div[data-baseweb="select"], 
-    textarea {
-        background-color: #89CFF0 !important; /* Azul Bebé */
-        color: #000000 !important;           /* Texto negro para leer mejor */
+    /* 2. Formularios y Contenedores */
+    .stForm { background-color: #121212 !important; border: 1px solid #87CEEB !important; }
+
+    /* 3. Casillas de Llenado (Inputs, Selectboxes, Textareas) */
+    div[data-baseweb="base-input"], div[data-baseweb="select"], textarea {
+        background-color: #89CFF0 !important; 
+        color: #000000 !important;
         border-radius: 8px !important;
     }
+    input { color: #000000 !important; font-weight: bold; }
 
-    /* Ajustar el texto dentro de las casillas */
-    input, div[data-baseweb="select"] > div {
-        color: #000000 !important;
+    /* 4. Tablas (DataFrame) */
+    .stDataFrame {
+        background-color: #121212 !important;
+        border: 1px solid #87CEEB !important;
+    }
+    /* Encabezados de tabla */
+    thead tr th { background-color: #87CEEB !important; color: #000000 !important; }
+    /* Filas de tabla */
+    tbody tr td { color: #87CEEB !important; }
+
+    /* 5. Botones */
+    div.stButton > button {
         background-color: #89CFF0 !important;
+        color: #000000 !important;
+        border: none !important;
+        border-radius: 5px !important;
+        font-weight: bold !important;
     }
+    div.stButton > button:hover { background-color: #5DADE2 !important; }
 
-    /* Ajustar el color de fondo del formulario */
-    .stForm { 
-        background-color: #121212 !important; 
-        border: 1px solid #87CEEB !important; 
-    }
-    
-    /* Textos principales */
+    /* 6. Textos */
     h1, h2, h3, label { color: #87CEEB !important; }
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] { background-color: #0d1117 !important; }
     </style>
 """, unsafe_allow_html=True)
 
