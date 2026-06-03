@@ -13,20 +13,45 @@ from reportlab.lib.styles import getSampleStyleSheet
 st.set_page_config(layout="wide", page_title="Sistema Biomédico HDLM")
 
 # --- DISEÑO Y ESTILO DE PÁGINA ---
+# --- DISEÑO Y ESTILO DE PÁGINA (MODO OSCURO Y AZUL) ---
 st.markdown("""
     <style>
-    /* El !important obliga al navegador a sobrescribir el estilo base de Streamlit */
-    .stApp {
-        background-color: #f4f7f6 !important;
+    /* Fondo de toda la aplicación */
+    .stApp { 
+        background-color: #000000 !important; 
+        color: #87CEEB !important;
     }
     
-    /* Si también quieres cambiar el fondo de la zona principal de contenido */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f4f7f6 !important;
+    /* Contenedor principal y formularios */
+    .stForm { 
+        background-color: #121212 !important; 
+        border: 1px solid #87CEEB !important; 
+        border-radius: 12px; 
+        padding: 25px; 
+    }
+    
+    /* Textos, etiquetas e inputs */
+    h1, h2, h3, label, p { 
+        color: #87CEEB !important; 
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] { 
+        background-color: #0d1117 !important; 
+    }
+    
+    /* Asegurar que las celdas de las tablas también tengan contraste */
+    .stDataFrame {
+        color: #87CEEB !important;
+    }
+    
+    /* Ajuste para los inputs */
+    input {
+        color: #87CEEB !important;
+        background-color: #1a1a1a !important;
     }
     </style>
 """, unsafe_allow_html=True)
-
 # --- FUNCIONES DE REPORTES ---
 def generate_excel(df):
     output = io.BytesIO()
