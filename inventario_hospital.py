@@ -35,26 +35,23 @@ def generate_pdf_custom(df, titulo):
     # Tamaño carta en horizontal
     c = canvas.Canvas(buffer, pagesize=landscape(letter))
     
-# --- 1. LOGO Y ENCABEZADO (Prueba de diagnóstico) ---
-c.drawImage("issea.png", 50, 520, width=120, height=60)
-
-c.setFont("Helvetica-Bold", 14)
-c.drawCentredString(450, 560, "HOSPITAL DE LA MUJER")
-c.drawCentredString(450, 540, "INGENIERÍA BIOMÉDICA")
-c.setFont("Helvetica-Bold", 16)
-c.drawCentredString(450, 500, "INVENTARIO DE EQUIPO MEDICO")
+# --- 1. LOGO Y ENCABEZADO ---
+    c.drawImage("issea.png", 50, 520, width=120, height=60)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(450, 560, "HOSPITAL DE LA MUJER")
+    c.drawCentredString(450, 540, "INGENIERÍA BIOMÉDICA")
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(450, 500, "INVENTARIO DE EQUIPO MEDICO")
     
     # --- 2. DIBUJO DE LA TABLA ---
+    # Aquí empieza la tabla, justo debajo del título
     y = 450
-    # Posiciones X ajustadas para que se vean centradas y alineadas
     pos_x = [60, 110, 260, 370, 480, 590, 690] 
     headers = ["ID", "NOMBRE", "MARCA", "MODELO", "SERIE", "UBICACIÓN", "ESTADO"]
     
     # Rectángulo del encabezado de tabla
-    c.rect(50, y, 700, 30) 
-    c.setFont("Helvetica-Bold", 10)
-    for i, h in enumerate(headers):
-        c.drawString(pos_x[i], y + 10, h)
+    c.rect(50, y, 700, 30)
         
     # --- 3. CONTENIDO ---
     y -= 25
