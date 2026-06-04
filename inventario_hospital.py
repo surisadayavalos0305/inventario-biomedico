@@ -27,54 +27,47 @@ def get_connection():
 def generate_excel(df):
     output = io.BytesIO()
     
-    # 1. Filtramos para que solo salgan las columnas del PDF
+    # 1. Filtramos las columnas igual que antes
     columnas_deseadas = ['id', 'equipo', 'marca', 'modelo', 'serie', 'ubicacion', 'estado']
-    # .copy() evita advertencias de pandas
     df_filtrado = df[columnas_deseadas].copy()
-    # Renombramos para que se vean en mayúsculas como en el PDF
     df_filtrado.columns = ["ID", "NOMBRE", "MARCA", "MODELO", "SERIE", "UBICACIÓN", "ESTADO"]
     
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # 2. Escribimos los datos en la fila 7 (índice 6)
         df_filtrado.to_excel(writer, index=False, sheet_name='Inventario', startrow=6)
         
         workbook = writer.book
         worksheet = writer.sheets['Inventario']
         
-        # 3. Definir Formatos
+        # 2. Formatos sin color de fondo (transparente/normal)
         header_format = workbook.add_format({
-            'bold': True, 'align': 'center', 'valign': 'center',
-            'fg_color': '#D3D3D3', 'border': 1
+            'bold': True, 
+            'align': 'center', 
+            'valign': 'center',
+            'border': 1 # Solo dejamos el borde
+            # Quitamos 'fg_color' para que sea el fondo normal de Excel
         })
+        
         title_format = workbook.add_format({'bold': True, 'font_size': 14, 'align': 'center'})
         subtitle_format = workbook.add_format({'bold': True, 'font_size': 12, 'align': 'center'})
         
-        # 4. Títulos (igual al diseño del PDF)
+        # 3. Títulos
         worksheet.merge_range('A2:G2', 'HOSPITAL DE LA MUJER', title_format)
         worksheet.merge_range('A3:G3', 'INGENIERÍA BIOMÉDICA', subtitle_format)
         worksheet.merge_range('A4:G4', 'INVENTARIO DE EQUIPO MÉDICO', title_format)
         worksheet.merge_range('A5:G5', '(F-HM-BM-01)', subtitle_format)
         
-        # 5. Insertar Logo
+        # 4. Logo
         try:
             worksheet.insert_image('A1', 'issea.png', {'x_scale': 0.5, 'y_scale': 0.5})
         except:
             pass
             
-        # 6. Formato a las columnas de la tabla
+        # 5. Aplicar formato a las columnas
         for i, col in enumerate(df_filtrado.columns):
-            worksheet.set_column(i, i, 20) # Ancho fijo para que no se vea amontonado
-            worksheet.write(6, i, col, header_format) # Reescribir encabezado con estilo
+            worksheet.set_column(i, i, 20)
+            worksheet.write(6, i, col, header_format) 
             
-        # 7. Pie de página
-        last_row = len(df_filtrado) + 7
-        worksheet.write(last_row, 6, "REV-01", workbook.add_format({'align': 'right'}))
-        
-        # Configuración de impresión
-        worksheet.set_landscape()
-        worksheet.set_paper(9) # A4
-        worksheet.fit_to_pages(1, 0) # Ajustar ancho
-        worksheet.hide_gridlines(2) # Estilo limpio
+        # Nota: El REV-01 ya no está en el código, por lo que no aparecerá.
 
     return output.getvalue()
 def generate_pdf_custom(df, titulo):
