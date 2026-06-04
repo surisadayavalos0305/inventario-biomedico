@@ -152,33 +152,24 @@ elif choice == "Mantenimiento":
         if st.form_submit_button("Guardar Mantenimiento"):
             conn = get_connection()
             cur = conn.cursor()
-            
             try:
-                query = """
-                    INSERT INTO mantenimientos 
-                    (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-                
-                info_equipo = f"{equipo} - Serie: {serie}"
-                valor_costo = float(costo) if costo and costo.replace('.','',1).isdigit() else 0.0
-                
-                valores = (info_equipo, fecha, tipo, tec, valor_costo, desc, prox)
+                query = "INSERT INTO mantenimientos (equipo_info, fecha_mantenimiento, tipo, tecnico, costo, descripcion, proximo_mantenimiento) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                valores = (f"{equipo} - Serie: {serie}", fecha, tipo, tec, float(costo) if costo else 0.0, desc, prox)
                 
                 cur.execute(query, valores)
-                conn.commit()
+                conn.commit() # Fuerza el guardado
                 
-                # Esto te dirá si realmente se insertó algo
-                st.write(f"Estado: {cur.rowcount} registro(s) guardado(s).")
-                st.success("¡Mantenimiento guardado exitosamente!")
+                # VERIFICACIÓN: Consultamos inmediatamente después de insertar
+                cur.execute("SELECT count(*) FROM mantenimientos")
+                count = cur.fetchone()[0]
+                st.write(f"Total de registros en la tabla ahora: {count}")
                 
+                st.success("Guardado correctamente")
             except Exception as e:
-                st.error(f"Error al guardar en la base de datos: {e}")
-            
+                st.error(f"Error: {e}")
             finally:
                 cur.close()
                 conn.close()
-                st.rerun()
 
 elif choice == "Bajas":
     st.header("Control de Bajas")
